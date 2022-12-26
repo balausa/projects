@@ -1,100 +1,59 @@
 import React from 'react';
-import { useState } from 'react';
 import './App.scss';
-
-const questions = [
-  {
-      title: 'React - это ... ?',
-      variants: [
-          'библиотека',
-          'фреймворк',
-          'приложение'
-      ],
-      correct: 0,
-  },
-  {
-      title: 'Компонент - это ... ',
-      variants: [
-          'приложение',
-          'часть приложения или страницы',
-          'то, что я не знаю что такое',
-      ],
-      correct: 1,
-  },
-  {
-      title: 'Что такое JSX?',
-      variants: [
-          'Это простой HTML',
-          'Это функция',
-          'Это тот же HTML, но с возможностью выполнять JS-код',
-      ],
-      correct: 2,
-  },
-];
-
-function Result({ correct }) {
-  return (
-      <div className="result">
-          <img src="https://cdn-icons-png.flaticon.com/512/2278/2278992.png" alt="You winner images" />
-
-          <h2> Вы отгадали {correct} ответа из {questions.length} </h2>
-
-          <a href="/">
-              <button>Попробовать снова</button>
-          </a>
-      </div>
-  );
-}
-
-function Game({ step, question, onClickVariant }) {
-   const procentage = Math.round((step / questions.length) * 100);
-
-  return (
-      <>
-          <div className="progress">
-              <div style={{ width: `${procentage}%` }}  className="progress__inner"></div>
-          </div>
-
-          <h1>{question.title}</h1>
-
-          <ul>
-              {question.variants.map((text, index) => (
-                  // При клике будет выводится новый вопрос по индексу
-                  <li
-                      onClick={() => onClickVariant(index)}
-                      key={text}> {text}
-                  </li>
-              ))}
-          </ul>
-      </>
-  );
-}
-
+import { Success } from './components/Success';
+import { Users } from './components/Users';
 
 function App() {
-  // Шаг
-  const [step, setStep] = useState(0);
-  // Проверка верного ответа
-  const [correct, setCorrect] = useState(0);
+    const [users, setUsers] = React.useState([])
+    const [isLoading, setLoading] = React.useState(true)
+    const [searchValue, setSearchValue] = React.useState('')
+    const [invites, setInvites] = React.useState([])
+    const [success, setSuccess] = React.useState(false)
 
-  const question = questions[step];
+    React.useEffect(() => {
+        fetch('https://reqres.in/api/users')
+            .then(res => res.json())
+            .then(json => {
+                setUsers(json.data)
+            })
+            .catch((err) => {
+                console.warn(err)
+                alert("Ошибка при получении пользователей")
+            })
+            .finally(() => setLoading(false))
+    },[]);
 
-  const onClickVariant = (index) => {
-      setStep(step + 1);
+    const onChangeSearchValue = (event) => {
+        setSearchValue(event.target.value);
+    };
+    const onClickInvite = (id) => {
+        if (invites.includes(id)) {
+            setInvites(prev => prev.filter(_id => _id !== id))
+        } else {
+            setInvites(prev => [...prev, id])
+        }
+    }
+    const onClickSendInvites = () => {
+        setSuccess(true)
+    }
 
-      if (index === question.correct) {
-          setCorrect(correct + 1);
-      }
-  };
-
-return (
-  <div className="App">
-      {step !== questions.length
-          ? ( <Game step={step} question={question} onClickVariant={onClickVariant}/>)
-          : ( <Result correct={correct} />)
-      }
-  </div>
-);
+    return (
+        <div className="App">
+            { success ? (
+                <Success count={invites.length}/>
+            ) : (
+                <Users
+                    items = {users}
+                    isLoading = {isLoading}
+                    searchValue = {searchValue}
+                    onChangeSearchValue = {onChangeSearchValue}
+                    invites = {invites}
+                    onClickInvite = {onClickInvite}
+                    onClickSendInvites = {onClickSendInvites}
+                />
+            )}
+        </div>
+    );
 }
 
 export default App;
