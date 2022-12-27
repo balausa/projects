@@ -1,65 +1,79 @@
 import React from 'react';
-import { Block } from './Block';
 import './App.scss';
+import {Collection} from "./Collection";
+
+const carts = [
+    { "name": "Все" },
+    { "name": "Море" },
+    { "name": "Горы" },
+    { "name": "Архитектура" },
+    { "name": "Города" }
+]
 
 function App() {
-    // const [rates, setRates] = React.useState({})
-    const ratesRef = React.useRef({})
-
-    const [fromCurrency, setFromCurrency] = React.useState("RUB")
-    const [toCurrency, setToCurrency] = React.useState("USD")
-    const [fromPrice, setFromPrice] = React.useState(0)
-    const [toPrice, setToPrice] = React.useState(1)
+    const [categoryId, setCategoryId] = React.useState(0)
+    const [searchValue, setSearchValue] = React.useState("")
+    const [collections, setCollections] = React.useState([])
+    const [isLoading, setIsLoading] = React.useState(0)
+    // добавление пагинации
+    const [page,setPage] = React.useState(1)
 
     React.useEffect(() => {
-        fetch('https://cdn.cur.su/api/latest.json')
+        setIsLoading(true)
+        const category = categoryId ? `category=${categoryId}` : ''
+
+        fetch(`https://634812fbdb76843976b9b35d.mockapi.io/Collections?page=${page}&limit=3&${category}`,)
             .then((res) => res.json())
             .then((json) => {
-                ratesRef.current = json.rates
-                onChangeToPrice(1)
+                setCollections(json)
             })
             .catch((err) => {
                 console.warn(err);
+                alert("Ошибка при получение данных")
             })
-    }, [])
+            .finally(() => setIsLoading(false))
+    }, [categoryId, page])
 
-    const onChangeFromPrice = (value) => {
-        const price = value / ratesRef.current[fromCurrency]
-        const result = price * ratesRef.current[toCurrency]
-        setToPrice(result.toFixed(3))
-        setFromPrice(value)
-    }
-    const onChangeToPrice = (value) => {
-        const result = (ratesRef.current[fromCurrency] / ratesRef.current[toCurrency]) * value
-        setFromPrice(result.toFixed(3));
-        setToPrice(value)
-    }
-
-    const onChangeFromCurrency = (cur) => {
-        setFromCurrency(cur)
-        onChangeFromPrice(fromPrice)
-    }
-
-    React.useEffect(() => {
-        onChangeFromPrice(fromPrice)
-    }, [fromCurrency])
-    React.useEffect(() => {
-        onChangeToPrice(toPrice)
-    }, [toCurrency])
 
     return (
         <div className="App">
-            <Block value={fromPrice}
-                currency={fromCurrency}
-                onChangeCurrency={onChangeFromCurrency}
-                onChangeValue={onChangeFromPrice}
-            />
+            <h1>Моя коллекция фотографий</h1>
+            <div className="top">
+                <ul className="tags">
+                    {  carts.map((obj, index) => (
+                        <li
+                            onClick={() => setCategoryId(index)}
+                            className={categoryId === index ? "active" : ""}
+                            key = {obj.name}>{obj.name}</li>
+                    ))}
 
-            <Block value={toPrice}
-                currency={toCurrency}
-                onChangeCurrency={setToCurrency}
-                onChangeValue={onChangeToPrice}
-            />
+                </ul>
+                <input
+                    value={searchValue}
+                    onChange = {(e) => setSearchValue(e.target.value)}
+                    className="search-input"
+                    placeholder="Поиск по названию"/>
+            </div>
+            <div className="content">
+                { isLoading
+                    ? <h2>Загрузка ...</h2>
+                    : (collections
+                        .filter(obj => {
+                            return obj.title.toLowerCase().includes(searchValue.toLowerCase())
+                        })
+                        .map((obj) => (
+                            <Collection key={obj.id} name={obj.title} images={obj.imageUrl}/>
+                        )))
+                }
+            </div>
+            <ul className="pagination">
+                {[...Array(3)].map((_, index) => (
+                        <li onClick = {() => setPage(index + 1)}
+                            className={page === index + 1 ? "active" : ''}>
+                            { index + 1 }
+                        </li>
+                    ))}
+            </ul>
         </div>
     );
 }
